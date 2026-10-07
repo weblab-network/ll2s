@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+docker build -t ll2s:dev .
+docker run --rm --network none --cap-add NET_ADMIN --cap-add NET_RAW \
+    -v "$PWD/tests:/tests:ro" ll2s:dev python3 /tests/capabilities.py
+# Privilege is limited to a disposable container with its own network namespace.
+# No host network, Docker socket, or writable host directory is mounted.
+docker run --rm --network none --privileged \
+    -e LL2S_DISPOSABLE_TEST=1 \
+    -v "$PWD/tests:/tests:ro" \
+    ll2s:dev python3 /tests/integration.py
+
+docker run --rm --network none --privileged \
+    -e LL2S_DISPOSABLE_TEST=1 \
+    -v "$PWD/tests:/tests:ro" \
+    ll2s:dev python3 /tests/management.py

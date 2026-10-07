@@ -1,0 +1,13 @@
+*
+!Dockerfile
+!.dockerignore
+!LICENSE
+!THIRD_PARTY.md
+!ll2s/
+!ll2s/*.py
+!scripts/
+!scripts/entrypoint
+!scripts/ll2sh
+!packaging/
+!packaging/SOURCES.md
+!packaging/collect_sources.py
