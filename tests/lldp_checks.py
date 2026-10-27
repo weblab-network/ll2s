@@ -45,18 +45,20 @@ def check_discovery(switches, cli, ns, wait_for, ping, blocked):
     wait_for("LLDP neighbors return after daemon restart", lambda: peers("s1") == expected["s1"], seconds=40)
     print(cli("s1", "show lldp neighbors").stdout, flush=True)
     # Per-port RX/TX controls, with the existing commit behavior (all ports
-    # briefly go down). Wait for both discovery and forwarding to reconverge.
+    # briefly go down). Cached peers can already match while the new policy is
+    # pending, so wait for the actual interface mode and neighbor set together.
     cli("s1", "conf t", "int eth1", "no lldp transmit", "end")
     wait_for("receive-only port keeps learning but stops advertising",
-             lambda: peers("s1") == expected["s1"] and peers("s2") == {("eth2", "s3", "eth2")}, seconds=65)
-    assert "RX only" in cli("s1", "show lldp interface eth1").stdout
+             lambda: "RX only" in cli("s1", "show lldp interface eth1").stdout
+             and peers("s1") == expected["s1"] and peers("s2") == {("eth2", "s3", "eth2")}, seconds=65)
     cli("s1", "conf t", "int eth1", "lldp transmit", "no lldp receive", "end")
     wait_for("transmit-only port advertises but does not learn",
-             lambda: peers("s1") == {("eth2", "s3", "eth1")} and peers("s2") == expected["s2"], seconds=65)
+             lambda: "TX only" in cli("s1", "show lldp interface eth1").stdout
+             and peers("s1") == {("eth2", "s3", "eth1")} and peers("s2") == expected["s2"], seconds=65)
     cli("s1", "conf t", "int eth1", "no lldp transmit", "end")
     wait_for("both directions disabled exclude the port",
-             lambda: peers("s1") == {("eth2", "s3", "eth1")} and peers("s2") == {("eth2", "s3", "eth2")}, seconds=65)
-    assert "disabled" in cli("s1", "show lldp interface eth1").stdout
+             lambda: "disabled" in cli("s1", "show lldp interface eth1").stdout
+             and peers("s1") == {("eth2", "s3", "eth1")} and peers("s2") == {("eth2", "s3", "eth2")}, seconds=65)
     cli("s1", "conf t", "no lldp run", "end")
     wait_for("global LLDP disable stops the discovery daemon",
              lambda: json.loads(state.read_text())["state"] == "disabled")
