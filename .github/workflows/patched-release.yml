@@ -1,0 +1,56 @@
+name: Publish tested LL2S OVS patch
+
+# Upload the reviewed binary and corresponding sources before dispatching.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ll2s-0.2.0-ovs-rstp1
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'weblab-network/ll2s' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Verify and load the reviewed binary/source pair
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          test "$(gh release view v0.2.0-ovs-rstp1 --json isDraft --jq .isDraft)" = false
+          mkdir bundle
+          gh release download v0.2.0-ovs-rstp1 --dir bundle --pattern 'll2s-*' --pattern image.json --pattern SHA256SUMS
+          python3 packaging/verify_release.py bundle
+          docker load -i bundle/ll2s-linux-amd64.tar.gz
+          python3 packaging/verify_release.py bundle --installed
+      - name: Test the exact release image
+        run: |
+          python3 -m unittest discover -s tests -v
+          python3 -m ll2s.cli --check -f examples/switch.conf
+          image=ghcr.io/weblab-network/ll2s:0.2.0-ovs-rstp1
+          docker run --rm --network none -v "$PWD/tests:/tests:ro" -v "$PWD/packaging:/packaging:ro" -w /tmp --entrypoint python3 "$image" -m unittest discover -s /tests -v
+          sudo modprobe openvswitch
+          docker run --rm --network none --cap-add NET_ADMIN --cap-add NET_RAW -v "$PWD/tests:/tests:ro" "$image" python3 /tests/capabilities.py
+          docker run --rm --network none --privileged -e LL2S_DISPOSABLE_TEST=1 -v "$PWD/tests:/tests:ro" "$image" python3 /tests/integration.py
+          docker run --rm --network none --privileged -e LL2S_DISPOSABLE_TEST=1 -v "$PWD/tests:/tests:ro" "$image" python3 /tests/management.py
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish the verified image without rebuilding
+        run: |
+          python3 packaging/verify_release.py bundle --installed
+          image=ghcr.io/weblab-network/ll2s
+          docker push "$image:0.2.0-ovs-rstp1"
+          docker tag "$image:0.2.0-ovs-rstp1" "$image:latest"
+          docker push "$image:latest"

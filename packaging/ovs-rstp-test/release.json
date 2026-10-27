@@ -1,0 +1,10 @@
+{
+  "image": "ghcr.io/weblab-network/ll2s:0.2.0-ovs-rstp1",
+  "image_id": "sha256:0788adf74bf3fa460dc89e8da2a06a0cc824e16a3cdc1c190858038f7781bf0c",
+  "release_tag": "v0.2.0-ovs-rstp1",
+  "files": {
+    "ll2s-dependency-sources.tar.gz": "009cc28163803a51265b3dfff1a1b9a5dea9c1f6088d32112fdce5059c583741",
+    "ll2s-linux-amd64.tar.gz": "52d09cec73851ef2f54b9c45cba603bc48baab0157ae2c7ae276751d1eb20f94",
+    "image.json": "7533c6971b691d50a5fb613e363f27dc279be1f0dd9a7bba20d545307de0381c"
+  }
+}

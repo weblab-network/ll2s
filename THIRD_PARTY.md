@@ -6,6 +6,10 @@ software, affiliation or full CLI compatibility.
 
 The current Alpine image installs [Open vSwitch](https://www.openvswitch.org/)
 through Alpine's package repository. The tested package is `openvswitch-3.7.1-r0`.
+The `0.2.0-ovs-rstp1` release overrides only `ovs-vswitchd` with a source-built
+OVS 3.7.1 daemon carrying the [root-vector patch](packaging/ovs-rstp-test/root-vector-order.patch).
+Its exact source, build metadata and override hashes accompany the image;
+the other OVS executables retain their Alpine package identity.
 OVS user-space software is primarily Apache-2.0 licensed; its upstream tree and
 packaged components retain their own notices and applicable licenses. LL2S calls
 its separate `ovs-vsctl` and `ovs-appctl` programs. The host supplies Linux's

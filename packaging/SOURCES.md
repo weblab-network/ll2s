@@ -17,3 +17,13 @@ Published images target Linux amd64. The host supplies the Open vSwitch kernel
 module; it is not part of the container image. Locally rebuilt images can resolve
 different Alpine revisions: regenerate their package inventory and source bundle
 rather than assuming a published bundle matches them.
+
+## OVS root-selection variant
+
+`0.2.0-ovs-rstp1` preserves the 0.2.0 runtime packages and overrides only
+`/usr/sbin/ovs-vswitchd` with patched OVS 3.7.1. Its dependency archive includes
+`dependencies/` for inherited packages and `ovs-override/` for the exact source,
+patch, recipe, notices and compiler/build APK metadata. The image carries these
+override files under `/usr/share/ll2s/ovs-rstp-test/`. `override.json` records the
+binary/source hashes separately from the inherited APK inventory. Original local
+test wording is retained because the tested artifact was promoted unchanged.

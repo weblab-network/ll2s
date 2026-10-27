@@ -1,7 +1,8 @@
 name: Publish LL2S container
 on:
   push:
-    tags: ['v*']
+    # Frozen OVS patch variants use patched-release.yml instead of rebuilding.
+    tags: ['v*', '!v*-ovs-*']
 permissions:
   contents: read
 concurrency:
@@ -37,6 +38,7 @@ jobs:
             cp /lib/apk/db/installed /tmp/runtime-installed
             apk add --no-cache abuild git build-base
             python3 -u /packaging/collect_sources.py /tmp/runtime-installed /out/dependencies
+            cp -a /usr/share/ll2s/ovs-rstp-test /out/dependencies/ovs-override
           '
           tar -czf ll2s-dependency-sources.tar.gz -C sources dependencies
           sha256sum ll2s-dependency-sources.tar.gz > SHA256SUMS

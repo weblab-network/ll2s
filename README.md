@@ -30,17 +30,23 @@ MSTP, PVST+, Rapid-PVST, LACP configuration and hardware offload are not impleme
 ## Build and run
 
 Use a Linux amd64 Docker host with the Open vSwitch kernel module. Prebuilt
-images are published at `ghcr.io/weblab-network/ll2s:0.2.0`; `latest` follows
+images are published at `ghcr.io/weblab-network/ll2s:0.2.0-ovs-rstp1`; `latest` follows
 the latest released build.
+
+The `0.2.0-ovs-rstp1` image includes our **OVS 3.7.1 RSTP root-selection patch**.
+We retested the original Cisco MST / LL2S RSTP topology and confirmed that the
+lower-cost uplink is selected correctly. This fixes the reproduced interoperability
+issue; LL2S still uses one STP/RSTP tree. See [release details](docs/releases/v0.2.0-ovs-rstp1.md)
+for the exact tested image, source bundle and validation.
 
 ### Prebuilt image
 
 ```sh
 sudo modprobe openvswitch
-docker pull ghcr.io/weblab-network/ll2s:0.2.0
+docker pull ghcr.io/weblab-network/ll2s:0.2.0-ovs-rstp1
 docker run -d --name ll2s --network none \
   --cap-add NET_ADMIN --cap-add NET_RAW \
-  -v ll2s-config:/etc/ll2s ghcr.io/weblab-network/ll2s:0.2.0
+  -v ll2s-config:/etc/ll2s ghcr.io/weblab-network/ll2s:0.2.0-ovs-rstp1
 docker exec -it ll2s ll2sh
 ```
 
@@ -49,8 +55,8 @@ versioned GHCR image directly. If your Weblab image selector still lists only
 `ll2s:dev`, add that compatibility tag:
 
 ```sh
-docker pull ghcr.io/weblab-network/ll2s:0.2.0
-docker tag ghcr.io/weblab-network/ll2s:0.2.0 ll2s:dev
+docker pull ghcr.io/weblab-network/ll2s:0.2.0-ovs-rstp1
+docker tag ghcr.io/weblab-network/ll2s:0.2.0-ovs-rstp1 ll2s:dev
 docker pull quay.io/frrouting/frr:10.7.1
 docker pull alpine:latest
 ```
@@ -75,6 +81,12 @@ docker run -d --name ll2s --network none \
   -v ll2s-config:/etc/ll2s ll2s:dev
 docker exec -it ll2s ll2sh
 ```
+
+The default build compiles the patched OVS daemon and installs the current LL2S
+source over the pinned 0.2.0 runtime. The [frozen image recipe](packaging/ovs-rstp-test/README.md)
+also permits rebuilding the original variant. Its original test-build wording is
+retained with the exact tested artifact; the release notes record its promotion.
+Build tools stay outside the runtime image.
 
 The host needs an installed `openvswitch` module. Load it after reboot or configure
 your normal module-loading mechanism. The image deliberately does not load host modules

@@ -11,3 +11,8 @@
 !packaging/
 !packaging/SOURCES.md
 !packaging/collect_sources.py
+!packaging/ovs-rstp-test/
+!packaging/ovs-rstp-test/Dockerfile
+!packaging/ovs-rstp-test/README.md
+!packaging/ovs-rstp-test/record_override.py
+!packaging/ovs-rstp-test/root-vector-order.patch

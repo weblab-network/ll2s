@@ -1,0 +1,123 @@
+--- a/lib/rstp-state-machines.c
++++ b/lib/rstp-state-machines.c
+@@ -82,6 +82,9 @@
+ static enum vector_comparison
+ compare_rstp_priority_vectors(const struct rstp_priority_vector *,
+                               const struct rstp_priority_vector *);
++static enum vector_comparison
++compare_rstp_root_vectors(const struct rstp_priority_vector *,
++                          const struct rstp_priority_vector *);
+ static bool rstp_times_equal(struct rstp_times *, struct rstp_times *);
+ 
+ /* Per-Bridge State Machine */
+@@ -323,8 +326,8 @@
+             (r->bridge_priority.designated_bridge_id & 0xffffffffffffULL)) {
+             continue;
+         }
+-        if (compare_rstp_priority_vectors(&candidate_vector,
+-                                          &best_vector) == SUPERIOR) {
++        if (compare_rstp_root_vectors(&candidate_vector,
++                                      &best_vector) == SUPERIOR) {
+             best_vector = candidate_vector;
+             r->root_times = p->port_times;
+             r->root_times.message_age++;
+@@ -2137,6 +2140,33 @@
+ /****************************************************************************
+  * [17.6] Priority vector calculation helper functions
+  ****************************************************************************/
++
++/* Root selection compares candidate vectors in strict priority order.  The
++ * received-information replacement exception in compare_rstp_priority_vectors()
++ * must not let a worse path replace a better candidate from another local port
++ * merely because both advertise the same Designated Bridge and Designated Port.
++ */
++static enum vector_comparison
++compare_rstp_root_vectors(const struct rstp_priority_vector *v1,
++                          const struct rstp_priority_vector *v2)
++{
++    if (v1->root_bridge_id != v2->root_bridge_id) {
++        return v1->root_bridge_id < v2->root_bridge_id ? SUPERIOR : INFERIOR;
++    }
++    if (v1->root_path_cost != v2->root_path_cost) {
++        return v1->root_path_cost < v2->root_path_cost ? SUPERIOR : INFERIOR;
++    }
++    if (v1->designated_bridge_id != v2->designated_bridge_id) {
++        return v1->designated_bridge_id < v2->designated_bridge_id ? SUPERIOR : INFERIOR;
++    }
++    if (v1->designated_port_id != v2->designated_port_id) {
++        return v1->designated_port_id < v2->designated_port_id ? SUPERIOR : INFERIOR;
++    }
++    if (v1->bridge_port_id != v2->bridge_port_id) {
++        return v1->bridge_port_id < v2->bridge_port_id ? SUPERIOR : INFERIOR;
++    }
++    return SAME;
++}
+ 
+ /* compare_rstp_priority_vectors() compares two struct rstp_priority_vectors
+  * and returns a value indicating if the first rstp_priority_vector is
+--- a/tests/rstp.at
++++ b/tests/rstp.at
+@@ -310,3 +310,63 @@
+ 
+ OVS_VSWITCHD_STOP
+ AT_CLEANUP
++
++AT_SETUP([RSTP root-vector unequal costs with identical designated IDs])
++AT_KEYWORDS([RSTP root-vector])
++# Two independent senders advertise the same designated bridge and port, as
++# can occur in common BPDU fields at an MST boundary.  Root ranking must still
++# honor path cost, then the receiving port ID.
++AT_DATA([root-vector-0],
++[bridge 0 0x111 = a
++bridge 1 0x111 = b
++bridge 2 0x333 = a:1000000 b:2000000
++run 1000
++check 2 = F:1000000 Di
++])
++AT_CHECK([ovstest test-rstp root-vector-0], [0], [])
++AT_CLEANUP
++
++AT_SETUP([RSTP root-vector reversed unequal costs with identical designated IDs])
++AT_KEYWORDS([RSTP root-vector])
++# Two independent senders advertise the same designated bridge and port, as
++# can occur in common BPDU fields at an MST boundary.  Root ranking must still
++# honor path cost, then the receiving port ID.
++AT_DATA([root-vector-1],
++[bridge 0 0x111 = a
++bridge 1 0x111 = b
++bridge 2 0x333 = a:2000000 b:1000000
++run 1000
++check 2 = Di F:1000000
++])
++AT_CHECK([ovstest test-rstp root-vector-1], [0], [])
++AT_CLEANUP
++
++AT_SETUP([RSTP root-vector equal costs with identical designated IDs])
++AT_KEYWORDS([RSTP root-vector])
++# Two independent senders advertise the same designated bridge and port, as
++# can occur in common BPDU fields at an MST boundary.  Root ranking must still
++# honor path cost, then the receiving port ID.
++AT_DATA([root-vector-2],
++[bridge 0 0x111 = a
++bridge 1 0x111 = b
++bridge 2 0x333 = a:1000000 b:1000000
++run 1000
++check 2 = F:1000000 Di
++])
++AT_CHECK([ovstest test-rstp root-vector-2], [0], [])
++AT_CLEANUP
++
++AT_SETUP([RSTP root-vector equal costs with port priority with identical designated IDs])
++AT_KEYWORDS([RSTP root-vector])
++# Two independent senders advertise the same designated bridge and port, as
++# can occur in common BPDU fields at an MST boundary.  Root ranking must still
++# honor path cost, then the receiving port ID.
++AT_DATA([root-vector-3],
++[bridge 0 0x111 = a
++bridge 1 0x111 = b
++bridge 2 0x333 = a:1000000^144 b:1000000^128
++run 1000
++check 2 = Di F:1000000
++])
++AT_CHECK([ovstest test-rstp root-vector-3], [0], [])
++AT_CLEANUP

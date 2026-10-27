@@ -1,0 +1,6 @@
+*
+!.dockerignore
+!Dockerfile
+!README.md
+!record_override.py
+!root-vector-order.patch
