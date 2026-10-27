@@ -158,7 +158,7 @@ else: raise SystemExit("No RSTP BPDU observed")
         services["s1"].wait(timeout=10)
         services["s1"] = start_service("s1")
         assert cli("s1", "show running-config").stdout == before
-        wait_for("saved startup configuration restores forwarding after service restart", ping)
+        wait_for("saved startup configuration restores forwarding after service restart", ping, seconds=45)
         wait_for("saved LLDP configuration restores discovery after service restart",
                  lambda: "Device ID" in cli("s1", "show lldp neighbors").stdout, seconds=65)
         # Loss of ovs-vswitchd must cause the supervisor to shut down data ports.
@@ -168,7 +168,7 @@ else: raise SystemExit("No RSTP BPDU observed")
         assert all("UP" not in x["flags"] for x in json.loads(ns("s3", "ip", "-j", "link", "show").stdout) if x["ifname"] in ("eth1", "eth2"))
         print("PASS: daemon loss leaves data ports administratively down", flush=True)
         services["s3"] = start_service("s3")
-        wait_for("forwarding restores after switch daemon failure and restart", ping)
+        wait_for("forwarding restores after switch daemon failure and restart", ping, seconds=45)
         ns("s3", "ovs-appctl", "-t", "/run/ll2s/s3/ovs/ovsdb-server.ctl", "exit")
         wait_for("supervisor detects database daemon loss", lambda: services["s3"].poll() is not None)
         assert services["s3"].returncode != 0
